@@ -6,6 +6,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: faceswap-backend
+    runtime: nvidia
     ports:
       - "8000:8000"
     volumes:
@@ -14,14 +15,8 @@ services:
       # Persist uploaded files
       - ./backend/uploads:/app/uploads
     environment:
-      - CUDA_VISIBLE_DEVICES=0
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/health')"]
