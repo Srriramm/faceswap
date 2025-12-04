@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Models (don't copy to container, use volumes)
+*.safetensors
+*.bin
+*.ckpt
+*.pth
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

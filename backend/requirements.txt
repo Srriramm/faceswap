@@ -1,0 +1,20 @@
+# Core Dependencies
+torch>=2.0.0
+torchvision
+git+https://github.com/huggingface/diffusers.git
+
+# API Framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Face Processing
+face_recognition
+opencv-python-headless
+Pillow==10.4.0
+
+# Utilities
+numpy
+transformers
+accelerate
+safetensors

@@ -1,0 +1,53 @@
+# Optional: CPU-only version (no GPU required)
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.cpu
+    container_name: faceswap-backend-cpu
+    ports:
+      - "8000:8000"
+    volumes:
+      - model-cache:/root/.cache/huggingface
+      - ./backend/uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - faceswap-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: faceswap-frontend-cpu
+    ports:
+      - "7860:7860"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:7860', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - faceswap-network
+
+volumes:
+  model-cache:
+    driver: local
+
+networks:
+  faceswap-network:
+    driver: bridge
