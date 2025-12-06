@@ -36,7 +36,8 @@ class ModelManager:
             # Load base model
             self.pipeline = QwenImageEditPlusPipeline.from_pretrained(
                 MODEL_NAME,
-                torch_dtype=torch.float16
+                torch_dtype=torch.float16,
+                low_cpu_mem_usage=True
             )
             
             print(f"🔄 Loading LoRA weights ({LORA_WEIGHT_NAME})...")

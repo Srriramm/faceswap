@@ -9,6 +9,7 @@ services:
     runtime: nvidia
     ports:
       - "8000:8000"
+    shm_size: '8gb'
     volumes:
       # Cache model downloads to avoid re-downloading
       - model-cache:/root/.cache/huggingface
