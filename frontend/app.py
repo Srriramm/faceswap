@@ -8,7 +8,7 @@ from typing import List, Dict
 
 # Backend API URL - use Docker service name in container, localhost otherwise
 import os
-BACKEND_URL = os.getenv("BACKEND_URL", "http://13.201.15.166:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://13.201.88.71:8000")
 
 # Global state to store detected faces
 detected_faces = []
@@ -112,16 +112,21 @@ def swap_faces(source_img, *target_images):
         # Convert source image to bytes
         img_byte_arr = io.BytesIO()
         source_img.save(img_byte_arr, format='PNG')
-        img_byte_arr.seek(0)
+        img_bytes = img_byte_arr.getvalue()
         
         # Send to backend
-        files = {"source_image": ("source.png", img_byte_arr, "image/png")}
-        data = {"target_faces": json.dumps(target_faces_dict)}
+        # Create JSON file for target faces
+        target_faces_json = json.dumps(target_faces_dict)
+        target_faces_bytes = io.BytesIO(target_faces_json.encode('utf-8'))
+        
+        files = {
+            "source_image": ("source.png", img_bytes, "image/png"),
+            "target_faces": ("targets.json", target_faces_bytes, "application/json")
+        }
         
         response = requests.post(
             f"{BACKEND_URL}/swap",
             files=files,
-            data=data,
             timeout=120  # 2 minutes timeout
         )
         
@@ -257,6 +262,6 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        share=False,
+        share=True,
         show_error=True
     )
