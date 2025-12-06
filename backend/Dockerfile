@@ -39,4 +39,4 @@
         CMD curl -f http://localhost:8000/health || exit 1
 
     # Run the application
-    CMD ["python3", "server.py"]
+    CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]

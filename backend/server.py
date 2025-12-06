@@ -213,4 +213,4 @@ if __name__ == "__main__":
     from config import HOST, PORT
     
     print("🚀 Starting Face Swap API Server...")
-    uvicorn.run(app, host=HOST, port=PORT, reload=True)
+    uvicorn.run(app, host=HOST, port=PORT)
