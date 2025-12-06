@@ -31,8 +31,14 @@ async def lifespan(app: FastAPI):
     Model loading is not done here to prevent blocking container startup.
     Models are loaded lazily on first inference request.
     """
-    print("🚀 Face Swap API Server started successfully")
-    print("ℹ️  Model will be loaded on first inference request (lazy loading)")
+    print("🚀 Face Swap API Server starting...")
+    print("⏳ Loading model during startup (this may take a few minutes)...")
+    try:
+        model_manager.load()
+        print("✅ Model loaded successfully during startup")
+    except Exception as e:
+        print(f"❌ Failed to load model on startup: {e}")
+        # We don't raise here to allow the server to start and report the error via health check
     yield
     print("👋 Shutting down Face Swap API Server")
 
