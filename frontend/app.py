@@ -146,7 +146,7 @@ def base64_to_pil(b64_str: str) -> Image.Image:
 
 
 # Create Gradio Interface
-with gr.Blocks(title="Face Swap Application", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Face Swap Application") as demo:
     gr.Markdown("""
     # 🎭 Face Swap Application
     ### Powered by Qwen Image Edit + BFS Head V3
