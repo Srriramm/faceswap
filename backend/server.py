@@ -13,6 +13,7 @@ import numpy as np
 import torch
 from PIL import Image
 import face_recognition
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,11 +23,26 @@ from model import model_manager
 from utils import image_to_base64, base64_to_image, calculate_crop_region
 from config import CORS_ORIGINS, FACE_SWAP_PROMPT, NUM_INFERENCE_STEPS, GUIDANCE_SCALE, FACE_CROP_MULTIPLIER
 
-# Initialize FastAPI app
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for FastAPI startup and shutdown events.
+    Model loading is not done here to prevent blocking container startup.
+    Models are loaded lazily on first inference request.
+    """
+    print("🚀 Face Swap API Server started successfully")
+    print("ℹ️  Model will be loaded on first inference request (lazy loading)")
+    yield
+    print("👋 Shutting down Face Swap API Server")
+
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="Face Swap API",
     description="API for face detection and swapping using Qwen Image Edit + BFS LoRA",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable CORS
@@ -37,12 +53,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Load model on startup"""
-    model_manager.load()
 
 
 @app.get("/")
@@ -57,12 +67,20 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """Health check endpoint"""
+    """
+    Health check endpoint.
+    Returns healthy even when model is not loaded (lazy loading approach).
+    """
+    gpu_available = torch.cuda.is_available()
+    model_loaded = model_manager.is_loaded()
+    
     return {
         "status": "healthy",
-        "gpu_available": torch.cuda.is_available(),
-        "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
-        "model_loaded": model_manager.is_loaded()
+        "gpu_available": gpu_available,
+        "gpu_name": torch.cuda.get_device_name(0) if gpu_available else None,
+        "model_loaded": model_loaded,
+        "ready_for_inference": model_loaded,
+        "message": "Model ready" if model_loaded else "Model will load on first inference request"
     }
 
 
@@ -128,6 +146,18 @@ async def swap_faces(
     # Start with copy of source as canvas
     current_canvas = source_pil.copy()
 
+    # Lazy load model if not already loaded
+    if not model_manager.is_loaded():
+        print("🔄 Model not loaded yet, loading now (this may take a few minutes)...")
+        try:
+            model_manager.load()
+        except Exception as e:
+            print(f"❌ Failed to load model: {e}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Model loading failed: {str(e)}"}
+            )
+    
     # Process each target face
     for face_id_str, target_b64 in targets.items():
         face_id = int(face_id_str)
@@ -153,25 +183,22 @@ async def swap_faces(
         source_crop = current_canvas.crop((crop_left, crop_top, crop_right, crop_bottom))
 
         # Run model inference
-        if model_manager.is_loaded():
-            try:
-                output = model_manager.generate(
-                    source_image=source_crop,
-                    target_image=target_pil,
-                    prompt=FACE_SWAP_PROMPT,
-                    num_steps=NUM_INFERENCE_STEPS,
-                    guidance_scale=GUIDANCE_SCALE
-                )
+        try:
+            output = model_manager.generate(
+                source_image=source_crop,
+                target_image=target_pil,
+                prompt=FACE_SWAP_PROMPT,
+                num_steps=NUM_INFERENCE_STEPS,
+                guidance_scale=GUIDANCE_SCALE
+            )
 
-                # Resize output to match crop size and paste back
-                output = output.resize(source_crop.size)
-                current_canvas.paste(output, (crop_left, crop_top))
-                print(f"   ✅ Face {face_id} swapped successfully")
+            # Resize output to match crop size and paste back
+            output = output.resize(source_crop.size)
+            current_canvas.paste(output, (crop_left, crop_top))
+            print(f"   ✅ Face {face_id} swapped successfully")
 
-            except Exception as e:
-                print(f"   ❌ Inference failed for face {face_id}: {e}")
-        else:
-            print("   ❌ Pipeline not loaded")
+        except Exception as e:
+            print(f"   ❌ Inference failed for face {face_id}: {e}")
 
     # Return final result as PNG
     buffered = io.BytesIO()
