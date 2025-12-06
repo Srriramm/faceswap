@@ -117,7 +117,7 @@ async def detect_faces(file: UploadFile = File(...)):
 @app.post("/swap")
 async def swap_faces(
     source_image: UploadFile = File(...),
-    target_faces: str = Form(...)
+    target_faces: str = Form("{}")
 ):
     """
     Perform face swapping on source image
@@ -130,9 +130,18 @@ async def swap_faces(
         PNG image with swapped faces
     """
     print("🔄 Starting face swap operation...")
+    print(f"   Received file: {source_image.filename}")
+    print(f"   Target faces data length: {len(target_faces)}")
     
     # Parse target faces JSON
-    targets: Dict[str, str] = json.loads(target_faces)
+    try:
+        targets: Dict[str, str] = json.loads(target_faces)
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON in target_faces: {e}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Invalid JSON in target_faces: {str(e)}"}
+        )
 
     # Load source image
     source_content = await source_image.read()

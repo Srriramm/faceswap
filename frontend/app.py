@@ -8,7 +8,7 @@ from typing import List, Dict
 
 # Backend API URL - use Docker service name in container, localhost otherwise
 import os
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://13.201.15.166:8000")
 
 # Global state to store detected faces
 detected_faces = []
@@ -22,12 +22,15 @@ def check_backend_health():
         if response.status_code == 200:
             data = response.json()
             status = "✅ Backend is healthy"
-            if data.get("gpu"):
-                status += f"\n🎮 GPU Available"
+            if data.get("gpu_available"):
+                gpu_name = data.get("gpu_name", "Unknown GPU")
+                status += f"\n🎮 GPU Available: {gpu_name}"
             else:
                 status += f"\n⚠️ Running on CPU (slower)"
             if data.get("model_loaded"):
-                status += f"\n🤖 Model loaded successfully"
+                status += f"\n🤖 Model loaded and ready"
+            else:
+                status += f"\n⏳ Model will load on first request"
             return status
         return "❌ Backend not responding"
     except Exception as e:
